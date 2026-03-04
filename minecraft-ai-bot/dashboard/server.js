@@ -1,6 +1,7 @@
 import express from 'express';
 import http from 'http';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import session from 'express-session';
 import bcrypt from 'bcrypt';
 import { Server as SocketIOServer } from 'socket.io';
@@ -27,9 +28,18 @@ const adminUser = {
   passwordHash: bcrypt.hashSync(config.dashboard.password + '', 10)
 };
 
+// compute public directory relative to this file
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const publicDir = path.join(__dirname, 'public');
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(process.cwd(), 'minecraft-ai-bot', 'dashboard', 'public')));
+app.use(express.static(publicDir));
+
+// ensure root always serves index
+app.get('/', (req, res) => {
+  res.sendFile(path.join(publicDir, 'index.html'));
+});
 
 app.post('/login', (req, res) => {
   const { username, password } = req.body;
