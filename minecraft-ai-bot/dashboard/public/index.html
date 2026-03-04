@@ -1,0 +1,67 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Minecraft AI Bot Dashboard</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1>Minecraft AI Bot</h1>
+      <div id="login-panel">
+        <input id="username" placeholder="admin" />
+        <input id="password" type="password" placeholder="password" />
+        <button id="login">Login</button>
+      </div>
+    </header>
+
+    <main>
+      <section id="status" class="panel">
+        <h2>Bot Status</h2>
+        <div id="status-content">Disconnected</div>
+      </section>
+
+      <section id="inventory" class="panel">
+        <h2>Inventory</h2>
+        <div id="inventory-grid"></div>
+      </section>
+
+      <section id="chat" class="panel">
+        <h2>Chat</h2>
+        <div id="chat-log"></div>
+        <input id="chat-input" placeholder="Say something to the server" />
+        <button id="send-chat">Send</button>
+      </section>
+
+      <section id="radar" class="panel">
+        <h2>Entity Radar</h2>
+        <canvas id="radar-canvas" width="400" height="400"></canvas>
+      </section>
+
+      <section id="city" class="panel">
+        <h2>City Builder</h2>
+        <div id="city-status">No active build</div>
+        <button id="build-village">Build Village</button>
+        <button id="build-medieval">Build Medieval</button>
+        <button id="build-modern">Build Modern</button>
+      </section>
+
+      <section id="controls" class="panel">
+        <h2>Manual Controls</h2>
+        <div id="controls-grid">
+          <button data-control="forward">W</button>
+          <button data-control="left">A</button>
+          <button data-control="back">S</button>
+          <button data-control="right">D</button>
+          <button data-control="jump">Space</button>
+          <button data-control="sneak">Shift</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

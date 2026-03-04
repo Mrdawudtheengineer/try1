@@ -1,0 +1,11 @@
+body { background: #0f1117; color: #e6e6e6; font-family: Inter, Roboto, sans-serif; margin: 0; }
+header { display:flex; justify-content:space-between; align-items:center; padding:16px; background:#111218; border-bottom:1px solid #1f2430; }
+h1 { color:#4cc2ff; margin:0; }
+.panel { background:#1a1d26; border-radius:8px; padding:12px; margin:12px; box-shadow:0 2px 8px rgba(0,0,0,0.5); }
+main { display:grid; grid-template-columns: 1fr 1fr; gap:12px; padding:12px; }
+#chat-log { height:200px; overflow:auto; background:#0f1117; padding:8px; border-radius:4px; }
+#inventory-grid { display:grid; grid-template-columns: repeat(9, 40px); gap:4px; }
+.inventory-slot { width:40px; height:40px; background:#0b0d12; border:1px solid #222630; display:flex; align-items:center; justify-content:center; }
+button { background:#4cc2ff; color:#0f1117; border:none; padding:8px 12px; border-radius:6px; cursor:pointer; }
+input { padding:8px; border-radius:6px; border:1px solid #222630; background:#0f1117; color:#e6e6e6; }
+#controls-grid { display:flex; gap:6px; flex-wrap:wrap; }
