@@ -564,13 +564,32 @@ function updateBotStatus(status) {
   }
 }
 
-function addChatMessage(msg) {
+function addChatMessage({ sender = 'System', text = '', type = 'info', ts = Date.now() } = {}) {
   const chatLog = document.getElementById('chat-log');
   const msgEl = document.createElement('div');
-  msgEl.className = 'chat-message';
-  msgEl.innerText = msg;
+  msgEl.className = `chat-message ${type}`;
+
+  const time = new Date(ts).toLocaleTimeString();
+  msgEl.innerHTML = `
+    <div class="chat-row">
+      <div class="chat-avatar">${sender.charAt(0) || 'D'}</div>
+      <div class="chat-body">
+        <div class="chat-meta"><strong>${sender}</strong> <span class="chat-time">${time}</span></div>
+        <div class="chat-text">${escapeHtml(text)}</div>
+      </div>
+    </div>`;
+
   chatLog.appendChild(msgEl);
   chatLog.scrollTop = chatLog.scrollHeight;
+}
+
+function escapeHtml(unsafe) {
+  return String(unsafe)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }
 
 function showNotification(text, type = 'info') {
@@ -722,13 +741,52 @@ document.querySelectorAll('.build-btn').forEach(btn => {
   });
 });
 
+// Go-To handler: parse coordinates from input and emit
+const gotoBtn = document.getElementById('goto-btn');
+if (gotoBtn) {
+  gotoBtn.addEventListener('click', () => {
+    const input = document.getElementById('goto-input');
+    const text = (input && input.value.trim()) || '';
+    if (!text) return;
+
+    // Try parse "x y z" numbers
+    const parts = text.split(/[ ,]+/).map(p => p.trim()).filter(Boolean);
+    let payload = { raw: text };
+    if (parts.length >= 3 && parts.slice(0,3).every(p => !isNaN(Number(p)))) {
+      payload = { x: Number(parts[0]), y: Number(parts[1]), z: Number(parts[2]) };
+    }
+
+    socket.emit('goto', payload);
+    addChatMessage({ sender: currentUser || 'You', text: `→ Goto: ${text}`, type: 'user' });
+    input.value = '';
+  });
+}
+
 // Chat
 document.getElementById('send-chat').addEventListener('click', () => {
   const input = document.getElementById('chat-input');
   const text = input.value.trim();
-  if (text) {
+  if (!text) return;
+
+  // Show user message
+  addChatMessage({ sender: currentUser || 'You', text, type: 'user' });
+
+  // Send to server for AI processing and broadcast
+  fetch('/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message: text, user: currentUser || 'dashboard' })
+  }).then(r => r.json()).then(data => {
+    if (data && data.reply) {
+      addChatMessage({ sender: 'Dawud', text: data.reply, type: 'ai' });
+    }
+  }).catch(err => {
+    // fallback to socket broadcast
     socket.emit('chat', text);
-    input.value = '';
+    showNotification('Chat server error, message sent to socket', 'warning');
+  });
+
+  input.value = '';
   }
 });
 
@@ -746,7 +804,7 @@ if (sendAiBtn) {
     const text = input.value.trim();
     if (text) {
       socket.emit('ai-command', { command: text, user: currentUser || 'dashboard' });
-      addChatMessage(`→ AI Command: ${text}`);
+      addChatMessage({ sender: currentUser || 'You', text: `→ AI Command: ${text}`, type: 'user' });
       input.value = '';
     }
   });
@@ -869,6 +927,30 @@ function applyTheme(theme) {
     document.body.classList.add(`theme-${theme}`);
   }
 }
+
+// Apply accent color live from settings
+function applyAccent(color) {
+  if (!color) return;
+  document.documentElement.style.setProperty('--accent', color);
+  document.querySelectorAll('.accent-preview').forEach(el => el.style.background = color);
+}
+
+// Save on change: listen to accent and theme changes to apply immediately
+document.addEventListener('DOMContentLoaded', () => {
+  const accentEl = document.getElementById('accent-color');
+  const themeEl = document.getElementById('theme');
+  if (accentEl) {
+    accentEl.addEventListener('input', (e) => {
+      applyAccent(e.target.value);
+    });
+    applyAccent(accentEl.value);
+  }
+  if (themeEl) {
+    themeEl.addEventListener('change', (e) => {
+      applyTheme(e.target.value);
+    });
+  }
+});
 
 /* ============================================================================
                           HELP SYSTEM

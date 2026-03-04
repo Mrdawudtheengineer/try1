@@ -15,6 +15,9 @@ export default class Brain {
   }
 
   async decideAction(perception, memory) {
+    if (this.paused) {
+      return { type: 'idle', priority: 999 };
+    }
     // Analyze current situation
     const situation = this.analyzeSituation(perception, memory);
 

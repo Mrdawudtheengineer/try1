@@ -15,13 +15,19 @@ export const config = {
 
   // OpenAI
   openai: {
-    apiKey: process.env.OPENAI_API_KEY || ''
+    apiKey: process.env.OPENAI_API_KEY || '',
+    model: process.env.OPENAI_MODEL || 'gpt-3.5-turbo'
   },
 
   // Dashboard
   dashboard: {
     port: parseInt(process.env.DASHBOARD_PORT) || 3000,
-    password: process.env.DASHBOARD_PASSWORD || 'admin123'
+    password: process.env.DASHBOARD_PASSWORD || 'admin123',
+    apiToken: process.env.DASHBOARD_API_TOKEN || 'changeme',
+    rateLimit: {
+      windowMs: 60000,
+      max: 60
+    }
   },
 
   // Logging

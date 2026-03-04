@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { getSocket } from '../dashboard/socket.js';
 
 const logDir = 'data';
 if (!fs.existsSync(logDir)) {
@@ -61,6 +62,16 @@ class Logger {
 
     if (logs.length % 100 === 0) {
       this.persistLogs();
+    }
+
+    // send to dashboard socket if available
+    try {
+      const io = getSocket();
+      if (io) {
+        io.emit('log', `[${level.toUpperCase()}] ${timestamp} - ${message}`);
+      }
+    } catch (e) {
+      // ignore
     }
   }
 

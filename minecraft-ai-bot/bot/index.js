@@ -5,6 +5,8 @@ import config from './config.js';
 
 // Import AI modules
 import Brain from '../ai/brain.js';
+import SmartBrain from '../ai/smartBrain.js';
+import CommandProcessor from '../ai/commandProcessor.js';
 import Perception from '../ai/perception.js';
 import Memory from '../ai/memory.js';
 import Planner from '../ai/planner.js';
@@ -29,8 +31,14 @@ let bot = null;
 let commandRouter = null;
 let aiModules = {};
 
+// performance tracking
+let tickIntervals = [];
+
 async function initializeBotSystems() {
   logger.info('Initializing bot systems...');
+
+  // Initialize command processor FIRST (other modules will use it)
+  const commandProcessor = new CommandProcessor(bot, aiModules);
 
   // Initialize AI modules
   aiModules = {
@@ -38,10 +46,14 @@ async function initializeBotSystems() {
     memory: new Memory(),
     planner: new Planner(),
     learning: new Learning(),
-    brain: new Brain(),
+    brain: new SmartBrain(bot, null), // Will be populated below
     conversation: new Conversation(),
-    cityPlanner: new CityPlanner()
+    cityPlanner: new CityPlanner(),
+    commandProcessor: commandProcessor
   };
+
+  // Wire command processor into smart brain
+  aiModules.brain.ai = aiModules;
 
   // Initialize system modules
   aiModules.movement = new Movement(bot);
@@ -57,23 +69,22 @@ async function initializeBotSystems() {
   // Initialize command router
   commandRouter = new CommandRouter(bot, aiModules);
 
-  // Set up message listener
+  // Set up message listener - Now uses smart brain for interpretation
   bot.on('message', async (jsonMsg) => {
     const msg = jsonMsg.toString();
     
-    // Check for chat commands
-    if (msg.startsWith('!')) {
-      await commandRouter.execute(msg);
-    } else if (msg.includes('bot') || msg.includes('ai')) {
-      // Potential question for AI
-      if (aiModules.conversation && config.openai.apiKey) {
-        try {
-          const response = await aiModules.conversation.respond(msg);
-          bot.chat(response);
-        } catch (err) {
-          logger.debug('Conversation error', { error: err.message });
+    // Try to execute as command using smart brain (handles natural language)
+    try {
+      const result = await aiModules.brain.interpretAndExecute(msg);
+      if (result) {
+        logger.info('Command executed', { result });
+        if (result.isCommand && result.data && aiModules.commandProcessor) {
+          logger.debug('Auto-executing command data', result.data);
+          await executeAction(result.data);
         }
       }
+    } catch (err) {
+      logger.debug('Smart brain command error', { error: err.message });
     }
   });
 
@@ -150,6 +161,18 @@ async function startBot() {
     logger.info('Connected to server');
     await initializeBotSystems();
 
+    // Set up tick rate tracking
+    let lastTick = Date.now();
+    if (bot) {
+      bot.on('physicTick', () => {
+        const now = Date.now();
+        const dt = now - lastTick;
+        lastTick = now;
+        tickIntervals.push(dt);
+        if (tickIntervals.length > 20) tickIntervals.shift();
+      });
+    }
+
     logger.info('Bot ready and operational');
     // Start wiring to dashboard socket when available
     wireDashboardIntegration();
@@ -208,33 +231,93 @@ function wireDashboardIntegration() {
             logger.error('City build via dashboard failed', { error: e.message });
           }
         });
+
+        socket.on('dashboard-command', (cmd) => {
+          logger.info('Received dashboard command', cmd);
+          switch (cmd.type) {
+            case 'pause':
+              if (aiModules.brain) aiModules.brain.paused = true;
+              break;
+            case 'resume':
+              if (aiModules.brain) aiModules.brain.paused = false;
+              break;
+            case 'reconnect':
+              if (connection) connection.scheduleReconnect();
+              break;
+            case 'force-task':
+              if (cmd.data) {
+                // directly execute action if structure matches
+                executeAction(cmd.data).catch(e=>logger.error('Forced task failed',{error:e.message,task:cmd.data}));
+              }
+              break;
+            default:
+              break;
+          }
+        });
       });
 
       // Emit periodic status
-      setInterval(() => {
-        try {
-          if (!bot) return;
-          const status = {
-            health: bot.health,
-            hunger: bot.food,
-            xp: bot.experience.level,
-            position: bot.entity.position,
-            task: aiModules.brain ? aiModules.brain.getCurrentTask() : null,
-            inventory: aiModules.inventory ? aiModules.inventory.getSummary() : null
-          };
-          io.emit('botStatus', status);
-        } catch (e) {
-          // ignore
+          // Emit rich telemetry every 500ms
+          setInterval(() => {
+            try {
+              if (!bot) return;
+              const invSummary = aiModules.inventory ? aiModules.inventory.getSummary() : { items: [] };
+              const currentTask = aiModules.brain ? aiModules.brain.getCurrentTask() : null;
+              const movement = aiModules.movement || {};
+
+              const telemetry = {
+                bot: {
+                  username: bot.username || (bot.entity && bot.entity.username) || 'bot',
+                  connected: !!(bot && bot.entity),
+                  server: `${config.minecraft.host}:${config.minecraft.port}`,
+                  ping: (bot._client && bot._client.ping) ? bot._client.ping : 0
+                },
+                position: bot.entity && bot.entity.position ? {
+                  x: Math.round(bot.entity.position.x),
+                  y: Math.round(bot.entity.position.y),
+                  z: Math.round(bot.entity.position.z),
+                  dimension: 'overworld'
+                } : null,
+                stats: {
+                  health: bot.health || 0,
+                  food: bot.food || 0,
+                  xp: bot.experience ? bot.experience.level : 0,
+                  armor: 0,
+                  toolDurability: null
+                },
+                movement: {
+                  state: movement.isMovingToTarget ? (movement.isMovingToTarget() ? 'moving' : 'idle') : 'unknown',
+                  speed: 0,
+                  target: movement.getCurrentTarget ? movement.getCurrentTarget() : null
+                },
+                inventory: invSummary.items || [],
+                ai: {
+                  currentGoal: currentTask ? currentTask.type : null,
+                  targetBlock: currentTask && currentTask.oreType ? currentTask.oreType : null,
+                  confidence: 0.9,
+                  currentTask
+                },
+                perception: aiModules.perception ? aiModules.perception.lastPerception : null,
+                performance: {
+                  cpu: process.cpuUsage(),
+                  memory: process.memoryUsage(),
+                  tickRate: (tickIntervals.length > 0) ? (1000 / (tickIntervals.reduce((a,b)=>a+b,0)/tickIntervals.length)).toFixed(1) : null
+                },
+                timestamp: Date.now()
+              };
+              io.emit('telemetry', telemetry);
+            } catch (e) {
+              // ignore
+            }
+          }, 500);
+
+          clearInterval(interval);
+          logger.info('Wired dashboard socket integration');
+        } catch (err) {
+          // keep retrying
         }
       }, 2000);
-
-      clearInterval(interval);
-      logger.info('Wired dashboard socket integration');
-    } catch (err) {
-      // keep retrying
     }
-  }, 2000);
-}
 
 // Handle graceful shutdown
 process.on('SIGINT', () => {
