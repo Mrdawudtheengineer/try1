@@ -53,10 +53,12 @@ export default function TasksPanel({ telemetry, onLog, apiToken }) {
     }
     const token = apiToken || localStorage.getItem('apiToken')
     try {
+      const payload = { type: 'force-task', data: { type: 'task', text: task.text } };
+      if (telemetry && telemetry.bot && telemetry.bot.id) payload.botId = telemetry.bot.id;
       const res = await fetch('/bot/command', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-api-token': token },
-        body: JSON.stringify({ type: 'force-task', data: { type: 'task', text: task.text } })
+        body: JSON.stringify(payload)
       })
       const j = await res.json()
       if (j.ok) onLog(`Task sent to bot: ${task.text}`)

@@ -63,6 +63,8 @@ For detailed setup, see [QUICKSTART.md](QUICKSTART.md)
 - **Spam filtering**: repeated messages are ignored to avoid chat spam
 - Fallback text provided if the OpenAI API fails or is unavailable
 
+*Multi‑bot support:* telemetry now includes a unique `bot.id`. The dashboard aggregates data from every connected bot and shows them in a chooser dropdown. Each bot can be controlled, chatted with, and monitored independently.
+
 ### 📋 Tasks Tab
 - Create and track tasks/goals
 - Priority levels (High/Medium/Low)

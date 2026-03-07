@@ -7,10 +7,14 @@ export default function ControlPanel({ apiToken, onLog, telemetry }) {
   const [selectedStructure, setSelectedStructure] = React.useState('')
   const send = async (type, data) => {
     try {
+      const payload = { type, data };
+      if (telemetry && telemetry.bot && telemetry.bot.id) {
+        payload.botId = telemetry.bot.id;
+      }
       const res = await fetch('/bot/command', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-api-token': apiToken },
-        body: JSON.stringify({ type, data })
+        body: JSON.stringify(payload)
       });
       const j = await res.json();
       onLog(`Sent ${type} command: ${j.ok ? 'OK' : j.error}`);

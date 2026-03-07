@@ -247,6 +247,7 @@ function wireDashboardIntegration() {
 
       io.on('connection', (socket) => {
         logger.info('Dashboard client connected (bot side)');
+        const myBotId = bot.username || (bot.entity && bot.entity.username) || `bot-${Date.now()}`;
 
         socket.on('control', (data) => {
           try {
@@ -267,8 +268,16 @@ function wireDashboardIntegration() {
           }
         });
 
-        socket.on('chat', (msg) => {
-          try { if (bot) bot.chat(msg); } catch (e) { logger.debug('Chat relay error', { error: e.message }); }
+        socket.on('chat', (payload) => {
+          try {
+            // payload may include botId and text
+            let text = payload;
+            if (payload && typeof payload === 'object') {
+              if (payload.botId && payload.botId !== myBotId) return; // not for me
+              text = payload.text || '';
+            }
+            if (bot && text) bot.chat(text);
+          } catch (e) { logger.debug('Chat relay error', { error: e.message }); }
         });
 
         socket.on('buildcity', async (type) => {
@@ -282,6 +291,11 @@ function wireDashboardIntegration() {
         });
 
         socket.on('dashboard-command', (cmd) => {
+          // if payload specifies a botId and it doesn't match this bot, ignore
+          if (cmd.botId && cmd.botId !== myBotId) {
+            logger.debug('Dashboard command for different bot, ignoring', { botId: cmd.botId });
+            return;
+          }
           logger.info('Received dashboard command', cmd);
           switch (cmd.type) {
             case 'pause':
@@ -392,6 +406,8 @@ function wireDashboardIntegration() {
 
               const telemetry = {
                 bot: {
+                  // unique identifier so dashboard can manage multiple bots
+                  id: bot.username || (bot.entity && bot.entity.username) || `bot-${Date.now()}`,
                   username: bot.username || (bot.entity && bot.entity.username) || 'bot',
                   connected: !!(bot && bot.entity),
                   server: `${config.minecraft.host}:${config.minecraft.port}`,

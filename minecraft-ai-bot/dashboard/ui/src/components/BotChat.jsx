@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 
-export default function BotChat({ socket }) {
+export default function BotChat({ socket, telemetry }) {
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const bottomRef = useRef(null)
@@ -8,7 +8,11 @@ export default function BotChat({ socket }) {
   useEffect(() => {
     if (!socket) return
     const handleIncoming = (msg) => {
-      setMessages(m => [...m, { from: 'bot', text: msg }])
+      let text = msg
+      if (msg && typeof msg === 'object') {
+        text = msg.text || ''
+      }
+      setMessages(m => [...m, { from: 'bot', text }])
     }
     socket.on('chat', handleIncoming)
     return () => {
@@ -22,7 +26,11 @@ export default function BotChat({ socket }) {
 
   const send = () => {
     if (!input.trim() || !socket) return
-    socket.emit('chat', input)
+    const payload = { text: input }
+    if (telemetry && telemetry.bot && telemetry.bot.id) {
+      payload.botId = telemetry.bot.id
+    }
+    socket.emit('chat', payload)
     setMessages(m => [...m, { from: 'you', text: input }])
     setInput('')
   }

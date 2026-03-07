@@ -127,7 +127,7 @@ export default class CommandProcessor {
   cmdHelp() {
     return {
       success: true,
-      response: `Available commands: !help, !ping, !coords, !health, !food, !inventory, !stats, !follow <player>, !goto <x y z>, !mine <block>, !stripmine, !quarry, !digdown, !digup, !farm, !harvest, !breed <animal>, !build, !pvp <player>, !attack, !defend, !stop, !come, !wander, !retreat, !drop <item>, !craft <item>, !sort, !status, and many more!`
+      response: `Available commands: !help, !ping, !info, !stats, !uptime, !coords, !health, !food, !inventory, !time, !follow <player>, !stop, !come, !goto <x y z>, !circle <player>, !guard <area>, !wander, !retreat, !jump, !lookat <player>, !mine <block>, !stripmine, !quarry, !digdown, !digup, !farm, !harvest, !plant <crop>, !breed <animal>, !feed <animal>, !milkcow, !eggs, !pvp <player>, !defend <player>, !attack, !protect, !build <structure>, !wall, !house, !bridge, !tower, !flatten, !repair, !deposit, !withdraw <item>, !craft <item>, !smelt, !enchant, !repair, !drop <item>, !give <player> <item>, !sort, !pause, !resume, !status, !mode <xyz>, !priority <xyz> and many more!`
     };
   }
 

@@ -104,11 +104,14 @@ app.get('/api/status', requireAuth, requireToken, (req, res) => {
 // Bot control commands
 const validCommands = ['pause','resume','reconnect','force-task','toggle-auto-move','toggle-reconnect'];
 app.post('/bot/command', requireAuth, requireToken, (req, res) => {
-  const { type, data } = req.body || {};
+  const { type, data, botId } = req.body || {};
   if (!validCommands.includes(type)) {
     return res.status(400).json({ ok: false, error: 'Invalid command' });
   }
-  io.emit('dashboard-command', { type, data });
+  // include optional botId for targeting specific agent(s)
+  const payload = { type, data };
+  if (botId) payload.botId = botId;
+  io.emit('dashboard-command', payload);
   return res.json({ ok: true });
 });
 
@@ -235,8 +238,12 @@ io.on('connection', (socket) => {
     socket.broadcast.emit('control', data);
   });
 
-  socket.on('chat', (msg) => {
-      logger.info('Chat from dashboard', msg);
+  socket.on('chat', (payload) => {
+      // payload may be a simple string or an object containing botId/text
+      logger.info('Chat from dashboard', payload);
+      // forward to other dashboard clients
+      socket.broadcast.emit('chat', payload);
+      // (bots also are connected to server; they will receive same event and can filter by botId)
   });
 
   socket.on('ai-command', (data) => {

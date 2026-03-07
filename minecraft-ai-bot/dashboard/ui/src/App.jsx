@@ -15,7 +15,9 @@ import PerformanceChart from './components/PerformanceChart'
 import ControlPanel from './components/ControlPanel'
 
 export default function App() {
-  const [telemetry, setTelemetry] = useState(null)
+  // store telemetry per bot to support multiple bots
+  const [botsTelemetry, setBotsTelemetry] = useState({})
+  const [selectedBot, setSelectedBot] = useState(null)
   const [logs, setLogs] = useState([])
   const [apiToken, setApiToken] = useState('')
   const [activeTab, setActiveTab] = useState('overview')
@@ -40,7 +42,13 @@ export default function App() {
     })
 
     s.on('telemetry', (data) => {
-      setTelemetry(data)
+      // telemetry may come from different bots; use id if present
+      const id = (data && data.bot && data.bot.id) ? data.bot.id : (data.bot && data.bot.username) || 'default';
+      setBotsTelemetry(prev => {
+        const next = { ...prev, [id]: data };
+        return next;
+      });
+      setSelectedBot(prev => prev || id);
     })
 
     s.on('chat', (msg) => pushLog(`CHAT: ${msg}`))
@@ -54,6 +62,9 @@ export default function App() {
     setLogs(l => [...l, { ts: Date.now(), text }].slice(-500))
   }
 
+  // compute currently selected telemetry object for panels
+  const telemetry = selectedBot ? botsTelemetry[selectedBot] : null;
+
   return (
     <div className="app-root">
       <header className="topbar">
@@ -61,6 +72,19 @@ export default function App() {
         <div className="status">
           {telemetry ? (
             <div>
+              {Object.keys(botsTelemetry).length > 1 && (
+                <select
+                  className="bot-select"
+                  value={selectedBot}
+                  onChange={(e) => setSelectedBot(e.target.value)}
+                >
+                  {Object.entries(botsTelemetry).map(([id, t]) => (
+                    <option key={id} value={id}>
+                      {t.bot.username} {id !== t.bot.username ? `(${id})` : ''}
+                    </option>
+                  ))}
+                </select>
+              )}
               <strong>{telemetry.bot.username}</strong> @ {telemetry.bot.server} • {telemetry.bot.connected ? '🟢 Connected' : '🔴 Disconnected'} • Ping {telemetry.bot.ping}ms
             </div>
           ) : (<div>⏳ Connecting…</div>)}
@@ -103,7 +127,7 @@ export default function App() {
                 <AIChat apiToken={apiToken} onLog={pushLog} />
               </div>
               <div className="column">
-                <BotChat socket={socket} />
+                <BotChat socket={socket} telemetry={telemetry} />
               </div>
             </div>
           </div>

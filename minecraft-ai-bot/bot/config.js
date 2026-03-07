@@ -2,15 +2,36 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+// Parse command line arguments
+function parseArgs() {
+  const args = {};
+  for (let i = 2; i < process.argv.length; i++) {
+    const arg = process.argv[i];
+    if (arg.startsWith('--')) {
+      const key = arg.slice(2);
+      const value = process.argv[i + 1];
+      if (value && !value.startsWith('--')) {
+        args[key] = value;
+        i++; // skip next
+      } else {
+        args[key] = true;
+      }
+    }
+  }
+  return args;
+}
+
+const cliArgs = parseArgs();
+
 export const config = {
   // Minecraft Server
   minecraft: {
-    host: process.env.MINECRAFT_HOST || 'stackables.aternos.me',
-    port: parseInt(process.env.MINECRAFT_PORT) || 39639,
-    username: process.env.MINECRAFT_USERNAME || 'Dawud',
-    password: process.env.MINECRAFT_PASSWORD || '',
-    version: process.env.MINECRAFT_VERSION || '1.20.1',
-    auth: 'microsoft' // or 'offline'
+    host: cliArgs.host || process.env.MINECRAFT_HOST || 'stackables.aternos.me',
+    port: parseInt(cliArgs.port) || parseInt(process.env.MINECRAFT_PORT) || 39639,
+    username: cliArgs.username || process.env.MINECRAFT_USERNAME || 'Dawud',
+    password: cliArgs.password || process.env.MINECRAFT_PASSWORD || '',
+    version: cliArgs.version || process.env.MINECRAFT_VERSION || '1.20.1',
+    auth: cliArgs.auth || 'microsoft' // or 'offline'
   },
 
   // OpenAI

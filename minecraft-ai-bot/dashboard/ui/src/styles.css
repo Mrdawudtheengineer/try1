@@ -80,6 +80,17 @@ body {
   color: var(--primary-color);
 }
 
+/* dropdown used when multiple bots are connected */
+.bot-select {
+  margin-right: 8px;
+  background: var(--bg-dark);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 0.9rem;
+}
+
 .nav-tabs {
   display: flex;
   gap: 0.5rem;
