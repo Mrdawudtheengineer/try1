@@ -32,4 +32,6 @@ Autonomous Minecraft AI Bot platform built with Mineflayer and a modular AI arch
 - Set `OPENAI_API_KEY` in your `.env`
 - Check `data/logs.json` for messages
 
-
+## Coolboyplayz111-restarts
+- He is my alt account
+- reyan-ops is my third account
